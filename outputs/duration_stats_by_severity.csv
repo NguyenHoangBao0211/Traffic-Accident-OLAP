@@ -1,0 +1,5 @@
+severity,accident_count,avg_duration_min,min_duration_min,max_duration_min,median_duration_min,p90_duration_min
+Fatal,1022,147.9,5.0,302.7,148.4,204.1
+Severe,3405,90.6,5.0,184.1,90.0,125.2
+Moderate,7380,45.1,5.0,95.4,45.1,62.5
+Minor,14193,19.9,5.0,42.4,19.9,27.6

@@ -1,0 +1,43 @@
+-- mdx_queries.mdx
+-- Reference MDX to run against the SSAS Multidimensional cube built on top
+-- of the star schema in data/traffic_accidents.db (fact_accident + 3 dims).
+-- This repo demonstrates the equivalent logic in SQL (see
+-- scripts/03_calculated_metrics.py) since it doesn't ship a live SSAS
+-- server; paste these directly into SSMS / SSDT once the cube is deployed.
+
+-- 1. Accident count by Year and Month
+SELECT
+    NON EMPTY [Time].[Calendar].[Month].MEMBERS ON ROWS,
+    { [Measures].[Accident Count] } ON COLUMNS
+FROM [TrafficAccidentCube];
+
+-- 2. Accident count by City and Time of Day
+SELECT
+    NON EMPTY [Location].[City].[City].MEMBERS ON ROWS,
+    { [Measures].[Accident Count], [Measures].[Night Accident %] } ON COLUMNS
+FROM [TrafficAccidentCube];
+
+-- 3. Calculated Member: Night Accident %
+CREATE MEMBER CURRENTCUBE.[Measures].[Night Accident %] AS
+    IIF(
+        [Measures].[Accident Count] = 0,
+        NULL,
+        ( [Time].[Is Night].&[1], [Measures].[Accident Count] )
+        / [Measures].[Accident Count]
+    ),
+    FORMAT_STRING = "Percent";
+
+-- 4. Calculated Member: Avg Accident Duration
+CREATE MEMBER CURRENTCUBE.[Measures].[Avg Duration Minutes] AS
+    [Measures].[Duration Minutes Sum] / [Measures].[Accident Count],
+    FORMAT_STRING = "#,#.0";
+
+-- 5. Drill-down: City x Road Type x Severity, current year only
+SELECT
+    NON EMPTY CROSSJOIN(
+        [Location].[City].[City].MEMBERS,
+        [Location].[Road Type].[Road Type].MEMBERS
+    ) ON ROWS,
+    { [Measures].[Accident Count], [Measures].[Avg Duration Minutes] } ON COLUMNS
+FROM [TrafficAccidentCube]
+WHERE ( [Accident Type].[Severity].&[Severe], [Time].[Calendar].[Year].&[2025] );
